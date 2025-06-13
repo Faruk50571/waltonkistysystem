@@ -1,7 +1,3 @@
-
-
-
-
 <!DOCTYPE html>
 <html lang="bn">
 <head>
@@ -38,38 +34,51 @@
       text-align: center;
     }
     button {
-      cursor: pointer;
-      border: none;
-      padding: 6px 10px;
-      margin: 2px;
-      border-radius: 4px;
-      font-weight: bold;
-      font-size: 14px;
-    }
-    .btn {
-      transition: background-color 0.3s ease;
-    }
-    .btn-success {
-      background-color: #28a745;
-      color: white;
-    }
-    .btn-success:hover {
-      background-color: #218838;
-    }
-    .btn-danger {
-      background-color: #dc3545;
-      color: white;
-    }
-    .btn-danger:hover {
-      background-color: #c82333;
-    }
-    .btn-warning {
-      background-color: #ffc107;
-      color: black;
-    }
-    .btn-warning:hover {
-      background-color: #e0a800;
-    }
+  cursor: pointer;
+  border: none;
+  padding: 8px 16px;
+  margin: 4px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: white;
+}
+.btn-success:hover {
+  background-color: #218838;
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+.btn-danger:hover {
+  background-color: #c82333;
+  transform: translateY(-1px);
+}
+
+.btn-warning {
+  background-color: #ffc107;
+  color: black;
+}
+.btn-warning:hover {
+  background-color: #e0a800;
+  transform: translateY(-1px);
+}
+
     input, textarea, select {
       width: 100%;
       padding: 6px 8px;
@@ -93,21 +102,69 @@
       box-shadow: 0 0 5px #aaa;
       margin-bottom: 30px;
     }
-    #filterSection {
-      margin-bottom: 15px;
-    }
+    #filterSection input {
+  max-width: 200px;
+  margin-right: 10px;
+}
+.btn {
+  cursor: pointer;
+  border: none;
+  padding: 10px 16px;
+  margin: 6px 6px 12px 0;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-green {
+  background-color: #28a745;
+}
+.btn-green:hover {
+  background-color: #218838;
+}
+
+.btn-blue {
+  background-color: #007bff;
+}
+.btn-blue:hover {
+  background-color: #0056b3;
+}
+
+.btn-orange {
+  background-color: #fd7e14;
+}
+.btn-orange:hover {
+  background-color: #e8590c;
+}
+
+.btn-purple {
+  background-color: #6f42c1;
+}
+.btn-purple:hover {
+  background-color: #5936a2;
+}
+
   </style>
 </head>
 <body>
 
-  <h2>কিস্তি ম্যানেজার সফটওয়্যার</h2>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: -30px;">
+  <h2 style="margin: 0px;">কিস্তি সিডিউল সফটওয়্যার</h2>
+  <img src="waltonplaza.png" alt="Logo" style="height: 80px;">
+</div>
+
 
   <div>
-    <button class="btn btn-success" onclick="showForm()">তথ্য যুক্ত করুন</button>
-    <button class="btn btn-success" onclick="showCustomer()">গ্রাহক তথ্য যোগ</button>
-    <button class="btn btn-warning" onclick="showNotification()">নোটিফিকেশন দেখুন</button>
-    <button class="btn btn-warning" onclick="showReport()">রিপোর্ট দেখুন</button>
-  </div>
+  <button class="btn btn-green" onclick="showForm()">📝 তথ্য যুক্ত</button>
+  <button class="btn btn-blue" onclick="showCustomer()">📁 গ্রাহক তথ্য</button>
+  <button class="btn btn-orange" onclick="showNotification()">🔔 নোটিফিকেশন</button>
+  <button class="btn btn-purple" onclick="showReport()">📊 রিপোর্ট</button>
+</div>
+
+
 
   <!-- Customer Excel Upload Section -->
   <div id="customerSection" class="hidden">
@@ -141,17 +198,29 @@
   <div id="reportSection" class="hidden">
     <h3>সকল কিস্তির রিপোর্ট</h3>
 
-    <div id="filterSection">
-<label for="filterAccount">Filter by Account Number:</label>
-      <input type="text" id="filterAccount" placeholder="Enter Account Number" oninput="loadReport()" />
-    <!-- Filter by Date Range -->
-<label for="startDate" style="margin-top:10px;">শুরুর তারিখ</label>
-<input type="date" id="startDate" onchange="loadReport()" />
-
-<label for="endDate" style="margin-top:10px;">শেষের তারিখ</label>
-<input type="date" id="endDate" onchange="loadReport()" />
+   <div id="filterSection">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+    <div>
+      <label for="filterAccount">একাউন্ট নাম্বার:</label><br />
+      <input type="text" id="filterAccount" placeholder="একাউন্ট নাম্বার লিখুন" oninput="loadReport()" />
     </div>
+    <div>
+      <label for="filterMobile">মোবাইল নাম্বার:</label><br />
+      <input type="text" id="filterMobile" placeholder="মোবাইল নাম্বার লিখুন" oninput="loadReport()" />
+    </div>
+  </div>
 
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px;">
+    <div>
+      <label for="startDate">শুরুর তারিখ:</label><br />
+      <input type="date" id="startDate" onchange="loadReport()" />
+    </div>
+    <div>
+      <label for="endDate">শেষের তারিখ:</label><br />
+      <input type="date" id="endDate" onchange="loadReport()" />
+    </div>
+  </div>
+</div>
     <table id="reportTable">
       <thead>
         <tr>
@@ -299,11 +368,13 @@
   const tbody = document.querySelector('#reportTable tbody');
   tbody.innerHTML = '';
   const filterAccount = document.getElementById('filterAccount').value.trim();
+  const filterMobile = document.getElementById('filterMobile').value.trim();
   const startDate = document.getElementById('startDate').value;
   const endDate = document.getElementById('endDate').value;
 
   schedules.forEach((item, index) => {
     const accountMatch = filterAccount === '' || item.account.includes(filterAccount);
+    const mobileMatch = filterMobile === '' || item.mobile.includes(filterMobile);
 
     let dateMatch = true;
     if (startDate && endDate) {
@@ -314,16 +385,16 @@
       dateMatch = item.date <= endDate;
     }
 
-    if (accountMatch && dateMatch) {
+    if (accountMatch && mobileMatch && dateMatch) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${index + 1}</td>
-  <td>${item.name}</td>
-  <td>${item.account}</td>
-  <td>${item.mobile}</td>
-  <td>${item.overdue}</td>
-  <td>${item.date}</td>
-  <td>${item.comments}</td>
+        <td>${item.name}</td>
+        <td>${item.account}</td>
+        <td>${item.mobile}</td>
+        <td>${item.overdue}</td>
+        <td>${item.date}</td>
+        <td>${item.comments}</td>
         <td>
           <button onclick="editSchedule(${index})">সম্পাদনা</button>
           <button onclick="deleteSchedule(${index})">মুছুন</button>
