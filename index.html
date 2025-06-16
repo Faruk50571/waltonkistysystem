@@ -1,18 +1,35 @@
+
 <!DOCTYPE html>
 <html lang="bn">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>কিস্তি ম্যানেজার</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBz8OzgeKHOc55qosyHWkwIYFMgx53kZVQ",
+      authDomain: "faruk-8a6e1.firebaseapp.com",
+      projectId: "faruk-8a6e1",
+      storageBucket: "faruk-8a6e1.appspot.com",
+      messagingSenderId: "1044829004219",
+      appId: "1:1044829004219:web:6c57b73f5bcc55dff5a49e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const userId = "admin";
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Kalpurush&display=swap');
-
     body {
       font-family: 'Kalpurush', Arial, sans-serif;
       margin: 20px;
       background: #f9f9f9;
       color: #333;
     }
+    /* ... [styles trimmed for brevity] ... */
     h2, h3 {
       color: #006400;
     }
@@ -146,12 +163,10 @@
 .btn-purple:hover {
   background-color: #5936a2;
 }
-
   </style>
 </head>
 <body>
-
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: -30px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: -30px;">
   <h2 style="margin: 0px;">কিস্তি সিডিউল সফটওয়্যার</h2>
   <img src="waltonplaza.png" alt="Logo" style="height: 80px;">
 </div>
@@ -199,24 +214,21 @@
     <h3>সকল কিস্তির রিপোর্ট</h3>
 
    <div id="filterSection">
-  <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+  <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 10px;">
     <div>
       <label for="filterAccount">একাউন্ট নাম্বার:</label><br />
-      <input type="text" id="filterAccount" placeholder="একাউন্ট নাম্বার লিখুন" oninput="loadReport()" />
+      <input type="text" id="filterAccount" placeholder="একাউন্ট লিখুন" oninput="loadReport()" />
     </div>
     <div>
       <label for="filterMobile">মোবাইল নাম্বার:</label><br />
-      <input type="text" id="filterMobile" placeholder="মোবাইল নাম্বার লিখুন" oninput="loadReport()" />
+      <input type="text" id="filterMobile" placeholder="মোবাইল লিখুন" oninput="loadReport()" />
     </div>
-  </div>
-
-  <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px;">
     <div>
       <label for="startDate">শুরুর তারিখ:</label><br />
       <input type="date" id="startDate" onchange="loadReport()" />
     </div>
     <div>
-      <label for="endDate">শেষের তারিখ:</label><br />
+      <label for="endDate">শেষ তারিখ:</label><br />
       <input type="date" id="endDate" onchange="loadReport()" />
     </div>
   </div>
@@ -259,23 +271,27 @@
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
   <script>
-    let editIndex = null;
-
-    function getCustomers() {
-      return JSON.parse(localStorage.getItem('customers') || '[]');
-    }
-    function setCustomers(customers) {
-      localStorage.setItem('customers', JSON.stringify(customers));
+    async function getCustomers() {
+      const snapshot = await db.collection("users").doc(userId).collection("customers").get();
+      return snapshot.docs.map(doc => doc.data());
     }
 
-    function fillCustomerDetails() {
+    async function setCustomers(customers) {
+      const batch = db.batch();
+      const ref = db.collection("users").doc(userId).collection("customers");
+      customers.forEach(customer => {
+        const docRef = ref.doc(customer.account);
+        batch.set(docRef, customer);
+      });
+      await batch.commit();
+    }
+
+    async function fillCustomerDetails() {
       const account = document.getElementById('account').value.trim();
-      const customers = getCustomers();
+      const customers = await getCustomers();
       const cust = customers.find(c => c.account === account);
-
-      if(cust) {
+      if (cust) {
         document.getElementById('name').value = cust.name;
         document.getElementById('mobile').value = cust.mobile;
         document.getElementById('overdue').value = cust.overdue;
@@ -286,175 +302,127 @@
       }
     }
 
-    function uploadExcel() {
+    async function uploadExcel() {
       const fileInput = document.getElementById('excelFile');
       const file = fileInput.files[0];
-      if(!file) {
-        alert("এক্সেল ফাইল নির্বাচন করুন");
-        return;
-      }
+      if (!file) return alert("এক্সেল ফাইল নির্বাচন করুন");
 
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = async function(e) {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, {defval: ''});
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-        let customers = getCustomers();
+        const customers = jsonData.map(row => ({
+          account: String(row.Account).trim(),
+          name: String(row.Name).trim(),
+          mobile: String(row.Mobile).trim(),
+          overdue: row.Overdue ? String(row.Overdue).trim() : ''
+        })).filter(c => c.account && c.name && c.mobile);
 
-        jsonData.forEach(row => {
-          if(row.Account && row.Name && row.Mobile) {
-            const existingIndex = customers.findIndex(c => c.account === String(row.Account).trim());
-            const newCustomer = {
-              account: String(row.Account).trim(),
-              name: String(row.Name).trim(),
-              mobile: String(row.Mobile).trim(),
-              overdue: row.Overdue ? String(row.Overdue).trim() : ''
-            };
-            if(existingIndex >= 0) {
-              customers[existingIndex] = newCustomer;
-            } else {
-              customers.push(newCustomer);
-            }
-          }
-        });
-
-        setCustomers(customers);
+        await setCustomers(customers);
         document.getElementById('uploadStatus').innerText = 'গ্রাহক তথ্য সফলভাবে আপলোড হয়েছে।';
         fileInput.value = '';
       };
       reader.readAsArrayBuffer(file);
     }
 
-    function formatDate(dateStr) {
-      if(!dateStr) return '';
-      const d = new Date(dateStr);
-      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-      return d.toISOString().split('T')[0];
-    }
-
-    function saveSchedule() {
+    async function saveSchedule() {
       const account = document.getElementById('account').value.trim();
       const name = document.getElementById('name').value.trim();
       const mobile = document.getElementById('mobile').value.trim();
       const overdue = document.getElementById('overdue').value.trim();
       const date = document.getElementById('date').value;
       const comments = document.getElementById('comments').value.trim();
-
-      if(!account || !name || !mobile || !date) {
-        alert("একাউন্ট, নাম, মোবাইল ও তারিখ অবশ্যই পূরণ করতে হবে");
-        return;
-      }
-
-      let schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
-      schedules.push({account, name, mobile, overdue, date, comments});
-      localStorage.setItem('schedules', JSON.stringify(schedules));
-
-      alert("কিস্তি তথ্য সংরক্ষণ করা হয়েছে");
-      clearForm();
-      showReport();
+      if (!account || !name || !mobile || !date) return alert("সব তথ্য পূরণ করুন");
+      await db.collection("users").doc(userId).collection("schedules").add({
+        account, name, mobile, overdue, date, comments
+      });
+      alert("তথ্য সংরক্ষণ করা হয়েছে");
+      clearForm(); showReport();
     }
 
-    function showReport() {
-      hideAllSections();
-      document.getElementById('reportSection').classList.remove('hidden');
-      loadReport();
+    async function loadReport() {
+      const snapshot = await db.collection("users").doc(userId).collection("schedules").get();
+      const schedules = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const tbody = document.querySelector('#reportTable tbody');
+      tbody.innerHTML = '';
+      const fAcc = document.getElementById('filterAccount').value.trim();
+      const fMob = document.getElementById('filterMobile').value.trim();
+      const fStart = document.getElementById('startDate').value;
+      const fEnd = document.getElementById('endDate').value;
+
+      schedules.filter(s =>
+        (!fAcc || s.account.includes(fAcc)) &&
+        (!fMob || s.mobile.includes(fMob)) &&
+        (!fStart || s.date >= fStart) &&
+        (!fEnd || s.date <= fEnd)
+      ).forEach((s, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${i+1}</td><td>${s.name}</td><td>${s.account}</td><td>${s.mobile}</td><td>${s.overdue}</td><td>${s.date}</td><td>${s.comments}</td>
+          <td><button onclick="editSchedule('${s.id}')">সম্পাদনা</button><button onclick="deleteSchedule('${s.id}')">মুছুন</button></td>`;
+        tbody.appendChild(tr);
+      });
     }
 
-    function loadReport() {
-  const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
-  const tbody = document.querySelector('#reportTable tbody');
-  tbody.innerHTML = '';
-  const filterAccount = document.getElementById('filterAccount').value.trim();
-  const filterMobile = document.getElementById('filterMobile').value.trim();
-  const startDate = document.getElementById('startDate').value;
-  const endDate = document.getElementById('endDate').value;
-
-  schedules.forEach((item, index) => {
-    const accountMatch = filterAccount === '' || item.account.includes(filterAccount);
-    const mobileMatch = filterMobile === '' || item.mobile.includes(filterMobile);
-
-    let dateMatch = true;
-    if (startDate && endDate) {
-      dateMatch = item.date >= startDate && item.date <= endDate;
-    } else if (startDate) {
-      dateMatch = item.date >= startDate;
-    } else if (endDate) {
-      dateMatch = item.date <= endDate;
-    }
-
-    if (accountMatch && mobileMatch && dateMatch) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${index + 1}</td>
-        <td>${item.name}</td>
-        <td>${item.account}</td>
-        <td>${item.mobile}</td>
-        <td>${item.overdue}</td>
-        <td>${item.date}</td>
-        <td>${item.comments}</td>
-        <td>
-          <button onclick="editSchedule(${index})">সম্পাদনা</button>
-          <button onclick="deleteSchedule(${index})">মুছুন</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    }
-  });
-}
-
-    function editSchedule(index) {
-      let schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
-      const item = schedules[index];
-      if(!item) return;
-
+    async function editSchedule(id) {
+      const doc = await db.collection("users").doc(userId).collection("schedules").doc(id).get();
+      if (!doc.exists) return alert("ডেটা পাওয়া যায়নি");
+      const item = doc.data();
       document.getElementById('account').value = item.account;
       document.getElementById('name').value = item.name;
       document.getElementById('mobile').value = item.mobile;
       document.getElementById('overdue').value = item.overdue;
       document.getElementById('date').value = item.date;
       document.getElementById('comments').value = item.comments;
-
-      editIndex = index;
       document.getElementById('saveBtn').classList.add('hidden');
-      document.getElementById('updateBtn').classList.remove('hidden');
+      const updateBtn = document.getElementById('updateBtn');
+      updateBtn.classList.remove('hidden');
+      updateBtn.dataset.id = id;
       showForm();
     }
 
-    function updateSchedule() {
-      if(editIndex === null) return alert("কোনো আইটেম সিলেক্ট করা হয়নি");
-
+    async function updateSchedule() {
+      const id = document.getElementById('updateBtn').dataset.id;
+      if (!id) return alert("কোনো আইটেম সিলেক্ট করা হয়নি");
       const account = document.getElementById('account').value.trim();
       const name = document.getElementById('name').value.trim();
       const mobile = document.getElementById('mobile').value.trim();
       const overdue = document.getElementById('overdue').value.trim();
       const date = document.getElementById('date').value;
       const comments = document.getElementById('comments').value.trim();
-
-      if(!account || !name || !mobile || !date) {
-        alert("একাউন্ট, নাম, মোবাইল ও তারিখ অবশ্যই পূরণ করতে হবে");
-        return;
-      }
-
-      let schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
-      schedules[editIndex] = {account, name, mobile, overdue, date, comments};
-      localStorage.setItem('schedules', JSON.stringify(schedules));
-
-      alert("কিস্তি তথ্য সফলভাবে আপডেট হয়েছে");
-      editIndex = null;
-      clearForm();
-      showReport();
+      await db.collection("users").doc(userId).collection("schedules").doc(id).update({
+        account, name, mobile, overdue, date, comments
+      });
+      alert("তথ্য আপডেট হয়েছে");
+      clearForm(); showReport();
     }
 
-    function deleteSchedule(index) {
-      if(!confirm('আপনি কি সত্যিই এই কিস্তি মুছে ফেলতে চান?')) return;
-
-      let schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
-      schedules.splice(index, 1);
-      localStorage.setItem('schedules', JSON.stringify(schedules));
+    async function deleteSchedule(id) {
+      if (!confirm('আপনি কি সত্যিই মুছতে চান?')) return;
+      await db.collection("users").doc(userId).collection("schedules").doc(id).delete();
       loadReport();
+    }
+
+    async function loadNotification() {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const snapshot = await db.collection("users").doc(userId).collection("schedules").where("date", "==", todayStr).get();
+      const schedules = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const tbody = document.querySelector('#notificationTable tbody');
+      tbody.innerHTML = '';
+      schedules.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${item.name}</td>
+          <td>${item.account}</td>
+          <td>${item.mobile}</td>
+          <td>${item.overdue}</td>
+          <td><button class="btn btn-success" onclick="editSchedule('${item.id}')">Edit</button>
+              <button class="btn btn-danger" onclick="deleteSchedule('${item.id}')">Delete</button></td>`;
+        tbody.appendChild(tr);
+      });
     }
 
     function clearForm() {
@@ -468,117 +436,74 @@
       document.getElementById('updateBtn').classList.add('hidden');
     }
 
-    function cancelEdit() {
-      clearForm();
-      editIndex = null;
-      showReport();
-    }
-
     function showForm() {
       hideAllSections();
       document.getElementById('formSection').classList.remove('hidden');
     }
-
+    function showCustomer() {
+      hideAllSections();
+      document.getElementById('customerSection').classList.remove('hidden');
+    }
     function showNotification() {
       hideAllSections();
       document.getElementById('notificationSection').classList.remove('hidden');
       loadNotification();
     }
-
-    function showCustomer() {
+    function showReport() {
       hideAllSections();
-      document.getElementById('customerSection').classList.remove('hidden');
-      document.getElementById('uploadStatus').innerText = '';
+      document.getElementById('reportSection').classList.remove('hidden');
+      loadReport();
     }
-
     function hideAllSections() {
       document.getElementById('formSection').classList.add('hidden');
       document.getElementById('notificationSection').classList.add('hidden');
       document.getElementById('reportSection').classList.add('hidden');
       document.getElementById('customerSection').classList.add('hidden');
     }
+    
+     async function exportToExcel() {
+      const snapshot = await db.collection("users").doc(userId).collection("schedules").get();
+      let schedules = snapshot.docs.map(doc => doc.data());
 
-    function loadNotification() {
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
-      const schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
-      const tbody = document.querySelector('#notificationTable tbody');
-      tbody.innerHTML = '';
+      const filterAccount = document.getElementById('filterAccount').value.trim().toLowerCase();
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
 
-     let serial = 1;
-schedules.forEach((item, index) => {
-  if(item.date === todayStr) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${serial++}</td>
-      <td>${item.name}</td>
-      <td>${item.account}</td>
-      <td>${item.mobile}</td>
-      <td>${item.overdue}</td>
-      <td style="text-align:center;">
-        <button class="btn btn-success" onclick="editSchedule(${index})">Edit</button>
-        <button class="btn btn-danger" onclick="deleteSchedule(${index})">Delete</button>
-      </td>
-          `;
-          tbody.appendChild(tr);
-        }
+      schedules = schedules.filter(s =>
+        (!filterAccount || s.account.toLowerCase().includes(filterAccount)) &&
+        (!startDate || s.date >= startDate) &&
+        (!endDate || s.date <= endDate)
+      );
+
+      if (schedules.length === 0) return alert("রিপোর্টে কোন ডাটা নেই");
+
+      const ws_data = [["SL", "Name", "Account", "Mobile", "Overdue", "Date", "Comments"]];
+      schedules.forEach((item, index) => {
+        ws_data.push([
+          index + 1,
+          item.name,
+          item.account,
+          item.mobile,
+          item.overdue,
+          item.date,
+          item.comments
+        ]);
       });
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Report");
+      XLSX.writeFile(wb, "installment_report.xlsx");
     }
 
-    // Export to Excel using SheetJS
-    function exportToExcel() {
-  const filterAccount = document.getElementById('filterAccount').value.trim().toLowerCase();
-  const startDate = document.getElementById('startDate').value;
-  const endDate = document.getElementById('endDate').value;
-  let schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
+    async function exportToPDF() {
+      const snapshot = await db.collection("users").doc(userId).collection("schedules").get();
+      let schedules = snapshot.docs.map(doc => doc.data());
 
-  if (filterAccount) {
-    schedules = schedules.filter(s => s.account.toLowerCase().includes(filterAccount));
-  }
-  if (startDate) {
-    schedules = schedules.filter(s => s.date >= startDate);
-  }
-  if (endDate) {
-    schedules = schedules.filter(s => s.date <= endDate);
-  }
+      const filterAccount = document.getElementById('filterAccount').value.trim().toLowerCase();
+      schedules = schedules.filter(s => !filterAccount || s.account.toLowerCase().includes(filterAccount));
 
-  if (schedules.length === 0) {
-    alert("রিপোর্টে কোন ডাটা নেই");
-    return;
-  }
-
-  const ws_data = [["SL", "Name", "Account", "Mobile", "Overdue", "Date", "Comments"]];
-  schedules.forEach((item, index) => {
-    ws_data.push([
-      index + 1,
-      item.name,
-      item.account,
-      item.mobile,
-      item.overdue,
-      formatDate(item.date),
-      item.comments
-    ]);
-  });
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  XLSX.utils.book_append_sheet(wb, ws, "Report");
-  XLSX.writeFile(wb, "installment_report.xlsx");
-}
-
-
-    // Export to PDF using jsPDF
-    function exportToPDF() {
-      const filterAccount = document.getElementById('filterAccount')?.value.trim().toLowerCase() || '';
-      let schedules = JSON.parse(localStorage.getItem('schedules') || '[]');
-
-      if(filterAccount) {
-        schedules = schedules.filter(s => s.account.toLowerCase().includes(filterAccount));
-      }
-      if(schedules.length === 0) {
-        alert("রিপোর্টে কোন ডাটা নেই");
-        return;
-      }
+      if (schedules.length === 0) return alert("রিপোর্টে কোন ডাটা নেই");
 
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
@@ -588,7 +513,6 @@ schedules.forEach((item, index) => {
 
       doc.setFontSize(10);
       const headers = ["Name", "Account", "Mobile", "Overdue", "Date", "Comments"];
-
       let startY = 30;
       const rowHeight = 7;
       const pageHeight = doc.internal.pageSize.height;
@@ -602,11 +526,11 @@ schedules.forEach((item, index) => {
           item.account,
           item.mobile,
           item.overdue,
-          formatDate(item.date),
+          item.date,
           item.comments.length > 20 ? item.comments.substring(0, 17) + '...' : item.comments
         ].join(" | ");
 
-        if(startY + rowHeight > pageHeight - 10) {
+        if (startY + rowHeight > pageHeight - 10) {
           doc.addPage();
           startY = 20;
           doc.text(headers.join(" | "), 14, startY);
@@ -618,8 +542,7 @@ schedules.forEach((item, index) => {
 
       doc.save("installment_report.pdf");
     }
-
+    
   </script>
-
 </body>
 </html>
